@@ -1,0 +1,7 @@
+<launch>
+  <arg name="input_topic" default="/image_raw"/>
+  <node pkg="tensorrt_bcnn" type="tensorrt_bcnn"
+    name="$(anon tensorrt_bcnn)" output="screen" >
+    <remap from="/image_raw"       to="$(arg input_topic)" />
+  </node>
+</launch>
