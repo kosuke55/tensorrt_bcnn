@@ -16,71 +16,23 @@
 
 #include "feature_generator.h"
 
-// feature_blob_.get() (= "data") will be used as out_blob
+
 bool FeatureGenerator::init()
 {
-  // out_blob_ = out_blob;
-  // raw feature parameters
   range_ = 60;
-  // width_ = 512;
-  // height_ = 512;
   width_ = 640;
   height_ = 640;
   min_height_ = -5.0;
   max_height_ = 5.0;
-  // CHECK_EQ(width_, height_)
-      // << "Current implementation version requires input_width == input_height.";
-
-  // set output blob and log lookup table
-  // out_blob_->Reshape(1, 8, height_, width_);
 
   log_table_.resize(256);
-  // max_height_data_.resize(width_ * height_);
   for (size_t i = 0; i < log_table_.size(); ++i)
   {
     log_table_[i] = std::log1p(static_cast<float>(i));
   }
 
-  // float* out_blob_data = nullptr;
-  // out_blob_data = out_blob_->mutable_cpu_data();
-
   int channel_index = 0;
-  // max_height_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // mean_height_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // count_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // direction_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // top_intensity_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // mean_intensity_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // distance_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // nonempty_data_ = out_blob_data + out_blob_->offset(0, channel_index++);
-  // CHECK_EQ(out_blob_->offset(0, channel_index), out_blob_->count());
-
-  // compute direction and distance features
   int siz = height_ * width_;
-  // std::vector<float> direction_data(siz);
-  // std::vector<float> distance_data(siz);
-
-  // for (int row = 0; row < height_; ++row)
-  // {
-  //   for (int col = 0; col < width_; ++col)
-  //   {
-  //     int idx = row * width_ + col;
-  //     // * row <-> x, column <-> y
-  //     // retutn the distance from my car to center of the grid.
-  //     // Pc means point cloud = real world scale. so transform pixel scale to real world scale
-  //     float center_x = Pixel2Pc(row, height_, range_);
-  //     float center_y = Pixel2Pc(col, width_, range_);
-  //     constexpr double K_CV_PI = 3.1415926535897932384626433832795;
-  //     // normaliztion. -0.5~0.5
-  //     direction_data_[idx] =
-  //       static_cast<float>(std::atan2(center_y, center_x) / (2.0 * K_CV_PI));
-  //     distance_data_[idx] =
-  //         static_cast<float>(std::hypot(center_x, center_y) / 60.0 - 0.5);
-  //   }
-  // }
-  // caffe::caffe_copy(siz, direction_data.data(), direction_data_);
-  // caffe::caffe_copy(siz, distance_data.data(), distance_data_);
-
   return true;
 }
 
@@ -94,24 +46,9 @@ float FeatureGenerator::logCount(int count)
 
 std::vector<float> FeatureGenerator::generate(
     const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ptr)
-    // cv::Mat& in_feature)
 {
   const auto& points = pc_ptr->points;
-  // ROS_INFO("get points");
-
-  // DO NOT remove this line!!!
-  // Otherwise, the gpu_data will not be updated for the later frames.
-  // It marks the head at cpu for blob.
-  // out_blob_->mutable_cpu_data();
-
   int siz = height_ * width_;
-  // cv::Mat in_feature(0, 0, CV_32FC(8));
-  // caffe::caffe_set(siz, float(-5), max_height_data_);
-  // caffe::caffe_set(siz, float(0), mean_height_data_);
-  // caffe::caffe_set(siz, float(0), count_data_);
-  // caffe::caffe_set(siz, float(0), top_intensity_data_);
-  // caffe::caffe_set(siz, float(0), mean_intensity_data_);
-  // caffe::caffe_set(siz, float(0), nonempty_data_);
 
   std::vector<float> max_height_data_(siz, -5);
   std::vector<float> mean_height_data_(siz, 0);
@@ -156,8 +93,8 @@ std::vector<float> FeatureGenerator::generate(
     // project point cloud to 2d map. clac in which grid point is.
     // * the coordinates of x and y are exchanged here
     // (row <-> x, column <-> y)
-    int pos_x = F2I(points[i].y, range_, inv_res_x);  // col
-    int pos_y = F2I(points[i].x, range_, inv_res_y);  // row
+    int pos_x = F2I(points[i].y, range_, inv_res_x);
+    int pos_y = F2I(points[i].x, range_, inv_res_y);
     if (pos_x >= width_ || pos_x < 0 || pos_y >= height_ || pos_y < 0)
     {
       map_idx_[i] = -1;
@@ -201,6 +138,6 @@ std::vector<float> FeatureGenerator::generate(
   in_feature.insert(in_feature.end(), mean_intensity_data_.begin(), mean_intensity_data_.end());
   in_feature.insert(in_feature.end(), distance_data_.begin(), distance_data_.end());
   in_feature.insert(in_feature.end(), nonempty_data_.begin(), nonempty_data_.end());
-  // std::cout << in_feature.size() << std::endl;
+
   return in_feature;
 }
