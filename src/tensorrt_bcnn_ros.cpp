@@ -12,8 +12,6 @@ pnh_("~")
 bool TensorrtBcnnROS::init()
 {
   std::string package_path = ros::package::getPath("tensorrt_bcnn");
-  // std::string engine_path = package_path +  "/data/bcnnv3_416_fp32.engine";
-  // std::string engine_path = package_path +  "/data/holecnn.engine";
   std::string engine_path = package_path +  "/data/bcnn_0111.engine";
 
   std::ifstream fs(engine_path);
@@ -69,7 +67,6 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg)
 {
   int rows_ = 640;
   int cols_ = 640;
-  // ROS_INFO("points callback called");
   std::chrono::system_clock::time_point start, end;
   start = std::chrono::system_clock::now();
 
