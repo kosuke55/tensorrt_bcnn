@@ -22,13 +22,15 @@ bool TensorrtBcnnROS::init()
   }
   else
   {
-    ROS_INFO("Could not find %s, try making TensorRT engine from caffemodel and prototxt",
-    engine_path.c_str());
+    ROS_INFO("Could not find %s.", engine_path.c_str());
+    // ROS_INFO("Could not find %s, try making TensorRT engine from caffemodel and prototxt",
+    // engine_path.c_str());
     // boost::filesystem::create_directories(package_path + "/data");
     // std::string prototxt_file;
-    // std::string caffemodel_file;    // pnh_.param<std::string>("prototxt_file", prototxt_file, "");
-    // pnh_.param<std::string>("caffemodel_file", caffemodel_file, "");
-    // std::string output_node = "bcnn-det";
+    // std::string caffemodel_file;
+    // pnh_.param<std::string>("prototxt_file", prototxt_file, package_path + "/data/bcnn_0111.caffemodel");
+    // pnh_.param<std::string>("caffemodel_file", caffemodel_file, package_path + "/data/bcnn_0111.prototxt");
+    // std::string output_node = "bcnn";
     // std::vector<std::string> output_name;
     // output_name.push_back(output_node);
     // std::vector<std::vector<float>> calib_data;
