@@ -98,7 +98,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   )
 
   add_library(tensorrt_bcnn_lib
-         lib/src/EntroyCalibrator.cpp
          lib/src/TrtNet.cpp
          lib/src/UpsampleLayer.cpp
          )

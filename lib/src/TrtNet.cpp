@@ -8,7 +8,6 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
-#include "EntroyCalibrator.h"
 
 using namespace nvinfer1;
 using namespace nvcaffeparser1;
