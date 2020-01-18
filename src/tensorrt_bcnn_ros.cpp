@@ -23,20 +23,6 @@ bool TensorrtBcnnROS::init()
   else
   {
     ROS_INFO("Could not find %s.", engine_path.c_str());
-    // ROS_INFO("Could not find %s, try making TensorRT engine from caffemodel and prototxt",
-    // engine_path.c_str());
-    // boost::filesystem::create_directories(package_path + "/data");
-    // std::string prototxt_file;
-    // std::string caffemodel_file;
-    // pnh_.param<std::string>("prototxt_file", prototxt_file, package_path + "/data/bcnn_0111.caffemodel");
-    // pnh_.param<std::string>("caffemodel_file", caffemodel_file, package_path + "/data/bcnn_0111.prototxt");
-    // std::string output_node = "bcnn";
-    // std::vector<std::string> output_name;
-    // output_name.push_back(output_node);
-    // std::vector<std::vector<float>> calib_data;
-    // Tn::RUN_MODE run_mode = Tn::RUN_MODE::FLOAT32;
-    // net_ptr_.reset(new Tn::trtNet(prototxt_file, caffemodel_file, output_name, calib_data, run_mode));
-    // net_ptr_->saveEngine(engine_path);
   }
   feature_generator_.reset(new FeatureGenerator());
   if (!feature_generator_->init())
@@ -69,8 +55,6 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg)
 {
   int rows_ = 640;
   int cols_ = 640;
-  std::chrono::system_clock::time_point start, end;
-  start = std::chrono::system_clock::now();
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromROSMsg(msg, *in_pc_ptr);
