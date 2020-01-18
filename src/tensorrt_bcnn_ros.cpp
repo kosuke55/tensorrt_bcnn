@@ -5,8 +5,16 @@
 #include <string>
 #include "tensorrt_bcnn_ros.h"
 
+#include <cuda.h>
+#include <chrono>
+
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
+  rows_ = 640;
+  cols_ = 640;
+  siz_ = rows_ * cols_;
+  in_feature.resize(siz_ * 8);
+
   std::string package_path = ros::package::getPath("tensorrt_bcnn");
   std::string engine_path = package_path + "/data/bcnn_0111.engine";
 
@@ -18,7 +26,7 @@ bool TensorrtBcnnROS::init() {
     ROS_INFO("Could not find %s.", engine_path.c_str());
   }
   feature_generator_.reset(new FeatureGenerator());
-  if (!feature_generator_->init()) {
+  if (!feature_generator_->init(&in_feature[0])) {
     ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
               __APP_NAME__);
     return false;
@@ -46,8 +54,6 @@ void TensorrtBcnnROS::createROSPubSub() {
 }
 
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
-  int rows_ = 640;
-  int cols_ = 640;
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
       new pcl::PointCloud<pcl::PointXYZI>);
@@ -57,14 +63,22 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   indices.resize(in_pc_ptr->size());
   std::iota(indices.begin(), indices.end(), 0);
   message_header_ = msg.header;
-  std::vector<float> input_data = feature_generator_->generate(in_pc_ptr);
+  for (int i = 0; i < siz_ * 8; ++i) {
+    if (i < siz_) {
+      in_feature[i] = -5;
+    } else if (siz_ <= i && i < siz_ * 3) {
+      in_feature[i] = 0;
+    } else if (siz_ * 4 <= i && i < siz_ * 6) {
+      in_feature[i] = 0;
+    } else if (siz_ * 7 <= i && i < siz_ * 8) {
+      in_feature[i] = 0;
+    }
+  }
+
+  feature_generator_->generate(in_pc_ptr, &in_feature[0]);
 
   int outputCount = net_ptr_->getOutputSize() / sizeof(float);
   std::unique_ptr<float[]> output_data(new float[outputCount]);
-
-  net_ptr_->doInference(input_data.data(), output_data.get());
-
-  auto output = output_data.get();
 
   cv::Mat confidence_image(640, 640, CV_8UC1);
   for (int row = 0; row < 640; ++row) {
@@ -72,6 +86,7 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
     for (int col = 0; col < 640; ++col) {
       int grid = row + col * 640;
       if (output[grid] > 0.5) {
+        // if (in_feature[siz_ * 7 + grid] > 0.5) {
         src[cols_ - col - 1] = 255;
       } else {
         src[cols_ - col - 1] = 0;

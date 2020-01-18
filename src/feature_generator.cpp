@@ -16,7 +16,7 @@
 
 #include "feature_generator.h"
 
-bool FeatureGenerator::init() {
+bool FeatureGenerator::init(float *in_feature_ptr) {
   range_ = 60;
   width_ = 640;
   height_ = 640;
@@ -30,36 +30,10 @@ bool FeatureGenerator::init() {
 
   int channel_index = 0;
   int siz = height_ * width_;
-  return true;
-}
 
-float FeatureGenerator::logCount(int count) {
-  if (count < static_cast<int>(log_table_.size())) {
-    return log_table_[count];
-  }
-  return std::log(static_cast<float>(1 + count));
-}
-
-std::vector<float> FeatureGenerator::generate(
-    const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ptr) {
-  const auto& points = pc_ptr->points;
-  int siz = height_ * width_;
-
-  std::vector<float> in_feature(siz * 8, 0);
-  for (int i = 0; i < siz; ++i) {
-    in_feature[i] = -5;
-  }
-  float *max_height_data_, *mean_height_data_, *count_data_, *direction_data_,
-      *top_intensity_data_, *mean_intensity_data_, *distance_data_,
-      *nonempty_data_;
-  max_height_data_ = &in_feature[0];
-  mean_height_data_ = max_height_data_ + siz;
-  count_data_ = max_height_data_ + siz * 2;
-  direction_data_ = max_height_data_ + siz * 3;
-  top_intensity_data_ = max_height_data_ + siz * 4;
-  mean_intensity_data_ = max_height_data_ + siz * 5;
-  distance_data_ = max_height_data_ + siz * 6;
-  nonempty_data_ = max_height_data_ + siz * 7;
+  float *direction_data_, *distance_data_;
+  direction_data_ = in_feature_ptr + siz * 3;
+  distance_data_ = in_feature_ptr + siz * 6;
 
   for (int row = 0; row < height_; ++row) {
     for (int col = 0; col < width_; ++col) {
@@ -78,6 +52,30 @@ std::vector<float> FeatureGenerator::generate(
           static_cast<float>(std::hypot(center_x, center_y) / 60.0 - 0.5);
     }
   }
+
+  return true;
+}
+
+float FeatureGenerator::logCount(int count) {
+  if (count < static_cast<int>(log_table_.size())) {
+    return log_table_[count];
+  }
+  return std::log(static_cast<float>(1 + count));
+}
+
+void FeatureGenerator::generate(
+    const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
+    float *max_height_data_) {
+  const auto &points = pc_ptr->points;
+  int siz = height_ * width_;
+  float *mean_height_data_, *count_data_, *top_intensity_data_,
+      *mean_intensity_data_, *nonempty_data_;
+
+  mean_height_data_ = max_height_data_ + siz;
+  count_data_ = max_height_data_ + siz * 2;
+  top_intensity_data_ = max_height_data_ + siz * 4;
+  mean_intensity_data_ = max_height_data_ + siz * 5;
+  nonempty_data_ = max_height_data_ + siz * 7;
 
   map_idx_.resize(points.size());
   float inv_res_x =
@@ -122,6 +120,4 @@ std::vector<float> FeatureGenerator::generate(
     }
     count_data_[i] = logCount(static_cast<int>(count_data_[i]));
   }
-
-  return in_feature;
 }
