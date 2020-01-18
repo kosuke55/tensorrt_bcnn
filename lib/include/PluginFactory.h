@@ -5,7 +5,6 @@
 #include <memory>
 #include <regex>
 #include "UpsampleLayer.h"
-#include "YoloLayer.h"
 #include "NvInferPlugin.h"
 #include "NvCaffeParser.h"
 
@@ -19,7 +18,6 @@ namespace Tn
     using nvinfer1::plugin::INvPlugin;
     using nvinfer1::plugin::createPReLUPlugin;
     using nvinfer1::UpsampleLayerPlugin;
-    using nvinfer1::YoloLayerPlugin;
     class PluginFactory : public nvinfer1::IPluginFactory, public nvcaffeparser1::IPluginFactoryExt
     {
         public:
@@ -31,11 +29,6 @@ namespace Tn
             inline bool isUpsample(const char* layerName)
             {
                 return std::regex_match(layerName , std::regex(R"(layer(\d*)-upsample)"));
-            }
-
-            inline bool isYolo(const char* layerName)
-            {
-                return strcmp(layerName,"yolo-det") == 0;
             }
 
             virtual nvinfer1::IPlugin* createPlugin(const char* layerName, const nvinfer1::Weights* weights, int nbWeights) override
@@ -53,12 +46,6 @@ namespace Tn
                     assert(nbWeights == 0 && weights == nullptr);
                     mPluginUpsample.emplace_back(std::unique_ptr<UpsampleLayerPlugin>(new UpsampleLayerPlugin(UPSAMPLE_SCALE,CUDA_THREAD_NUM)));
                     return mPluginUpsample.back().get();
-                }
-                else if (isYolo(layerName))
-                {
-                    assert(nbWeights == 0 && weights == nullptr && mPluginYolo.get() ==  nullptr);
-                    mPluginYolo.reset(new YoloLayerPlugin(CUDA_THREAD_NUM));
-                    return mPluginYolo.get();
                 }
                 else
                 {
@@ -81,12 +68,6 @@ namespace Tn
                 mPluginUpsample.emplace_back(std::unique_ptr<UpsampleLayerPlugin>(new UpsampleLayerPlugin(serialData, serialLength)));
                 return mPluginUpsample.back().get();
             }
-            else if (isYolo(layerName))
-            {
-                assert(mPluginYolo.get() ==  nullptr);
-                mPluginYolo.reset(new YoloLayerPlugin(serialData, serialLength));
-                return mPluginYolo.get();
-            }
             else
             {
                 assert(0);
@@ -102,8 +83,7 @@ namespace Tn
 
         bool isPluginExt(const char* name) override
         {
-            //std::cout << "check plugin " << name  << isYolo(name)<< std::endl;
-            return isLeakyRelu(name) || isUpsample(name) || isYolo(name); 
+            return isLeakyRelu(name) || isUpsample(name);
         }
 
         // The application has to destroy the plugin when it knows it's safe to do so.
@@ -115,14 +95,12 @@ namespace Tn
             for (auto& item : mPluginUpsample)
                 item.reset();
 
-            mPluginYolo.reset();
         }
 
         void (*nvPluginDeleter)(INvPlugin*){[](INvPlugin* ptr) { if(ptr) ptr->destroy(); }};
 
         std::vector<std::unique_ptr<INvPlugin,void (*)(INvPlugin*)>> mPluginLeakyRelu{};
         std::vector<std::unique_ptr<UpsampleLayerPlugin>> mPluginUpsample{};
-        std::unique_ptr<YoloLayerPlugin> mPluginYolo {nullptr};
     };
 }
 

@@ -91,7 +91,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   cuda_add_library(gpu_tensorrt_bcnn_lib
          lib/src/UpsampleLayer.cu
-         lib/src/YoloLayer.cu
          )
 
   target_link_libraries(gpu_tensorrt_bcnn_lib
