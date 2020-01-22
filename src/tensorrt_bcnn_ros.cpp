@@ -53,16 +53,7 @@ void TensorrtBcnnROS::createROSPubSub() {
       nh_.advertise<nav_msgs::OccupancyGrid>("confidence_map", 1);
 }
 
-void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
-
-  pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
-      new pcl::PointCloud<pcl::PointXYZI>);
-  pcl::fromROSMsg(msg, *in_pc_ptr);
-  pcl::PointIndices valid_idx;
-  auto &indices = valid_idx.indices;
-  indices.resize(in_pc_ptr->size());
-  std::iota(indices.begin(), indices.end(), 0);
-  message_header_ = msg.header;
+void TensorrtBcnnROS::reset_in_feature() {
   for (int i = 0; i < siz_ * 8; ++i) {
     if (i < siz_) {
       in_feature[i] = -5;
@@ -74,6 +65,20 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
       in_feature[i] = 0;
     }
   }
+}
+
+void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
+
+  pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
+      new pcl::PointCloud<pcl::PointXYZI>);
+  pcl::fromROSMsg(msg, *in_pc_ptr);
+  pcl::PointIndices valid_idx;
+  auto &indices = valid_idx.indices;
+  indices.resize(in_pc_ptr->size());
+  std::iota(indices.begin(), indices.end(), 0);
+  message_header_ = msg.header;
+
+  this->reset_in_feature();
 
   feature_generator_->generate(in_pc_ptr, &in_feature[0]);
 
