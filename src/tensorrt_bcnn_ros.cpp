@@ -81,7 +81,7 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   std::unique_ptr<float[]> output_data(new float[outputCount]);
 
   net_ptr_->doInference(in_feature.data(), output_data.get());
-  float * output = output_data.get();
+  float *output = output_data.get();
 
   cv::Mat confidence_image(640, 640, CV_8UC1);
   for (int row = 0; row < 640; ++row) {
