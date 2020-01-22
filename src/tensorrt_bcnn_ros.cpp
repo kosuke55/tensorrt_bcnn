@@ -67,6 +67,48 @@ void TensorrtBcnnROS::reset_in_feature() {
   }
 }
 
+cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output){
+  cv::Mat confidence_image(rows_, cols_, CV_8UC1);
+  for (int row = 0; row < rows_; ++row) {
+    unsigned char *src = confidence_image.ptr<unsigned char>(row);
+    for (int col = 0; col < cols_; ++col) {
+      int grid = row + col * 640;
+      if (output[grid] > 0.5) {
+        src[cols_ - col - 1] = 255;
+      } else {
+        src[cols_ - col - 1] = 0;
+      }
+    }
+  }
+  return confidence_image;
+}
+
+nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(cv::Mat confidence_image){
+  nav_msgs::OccupancyGrid confidence_map;
+  confidence_map.header = message_header_;
+  confidence_map.header.frame_id = "velodyne";
+  confidence_map.info.width = 640;
+  confidence_map.info.height = 640;
+  confidence_map.info.origin.orientation.w = 1;
+  float resolution = 120. / 640.;
+  confidence_map.info.resolution = resolution;
+  confidence_map.info.origin.position.x = -((640 + 1) * resolution * 0.5f);
+  confidence_map.info.origin.position.y = -((640 + 1) * resolution * 0.5f);
+  int data;
+  for (int i = 640 - 1; i >= 0; i--) {
+    for (unsigned int j = 0; j < 640; j++) {
+      data = confidence_image.data[i * 640 + j];
+      if (data >= 123 && data <= 131) {
+        confidence_map.data.push_back(-1);
+      } else if (data >= 251 && data <= 259) {
+        confidence_map.data.push_back(0);
+      } else
+        confidence_map.data.push_back(100);
+    }
+  }
+  return confidence_map;
+}
+
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
@@ -88,46 +130,12 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   net_ptr_->doInference(in_feature.data(), output_data.get());
   float *output = output_data.get();
 
-  cv::Mat confidence_image(640, 640, CV_8UC1);
-  for (int row = 0; row < 640; ++row) {
-    unsigned char *src = confidence_image.ptr<unsigned char>(row);
-    for (int col = 0; col < 640; ++col) {
-      int grid = row + col * 640;
-      if (output[grid] > 0.5) {
-        src[cols_ - col - 1] = 255;
-      } else {
-        src[cols_ - col - 1] = 0;
-      }
-    }
-  }
+  cv::Mat confidence_image = this->get_confidence_image(output);
+  nav_msgs::OccupancyGrid confidence_map = this->get_confidence_map(confidence_image);
+
   confidence_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
                          confidence_image)
           .toImageMsg());
-
-  nav_msgs::OccupancyGrid confidence_map;
-  confidence_map.header = message_header_;
-  confidence_map.header.frame_id = "velodyne";
-  confidence_map.info.width = 640;
-  confidence_map.info.height = 640;
-  confidence_map.info.origin.orientation.w = 1;
-  double resolution = 120. / 640.;
-  confidence_map.info.resolution = resolution;
-  confidence_map.info.origin.position.x = -((640 + 1) * resolution * 0.5f);
-  confidence_map.info.origin.position.y = -((640 + 1) * resolution * 0.5f);
-
-  // read the pixels of the image and fill the confidence_map table
-  int data;
-  for (int i = 640 - 1; i >= 0; i--) {
-    for (unsigned int j = 0; j < 640; j++) {
-      data = confidence_image.data[i * 640 + j];
-      if (data >= 123 && data <= 131) {
-        confidence_map.data.push_back(-1);
-      } else if (data >= 251 && data <= 259) {
-        confidence_map.data.push_back(0);
-      } else
-        confidence_map.data.push_back(100);
-    }
-  }
   confidence_map_pub_.publish(confidence_map);
 }
