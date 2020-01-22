@@ -5,8 +5,8 @@
 #include <string>
 #include "tensorrt_bcnn_ros.h"
 
-#include <cuda.h>
-#include <chrono>
+// #include <cuda.h>
+// #include <chrono>
 
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
@@ -80,13 +80,15 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   int outputCount = net_ptr_->getOutputSize() / sizeof(float);
   std::unique_ptr<float[]> output_data(new float[outputCount]);
 
+  net_ptr_->doInference(in_feature.data(), output_data.get());
+  float * output = output_data.get();
+
   cv::Mat confidence_image(640, 640, CV_8UC1);
   for (int row = 0; row < 640; ++row) {
     unsigned char *src = confidence_image.ptr<unsigned char>(row);
     for (int col = 0; col < 640; ++col) {
       int grid = row + col * 640;
       if (output[grid] > 0.5) {
-        // if (in_feature[siz_ * 7 + grid] > 0.5) {
         src[cols_ - col - 1] = 255;
       } else {
         src[cols_ - col - 1] = 0;
