@@ -10,13 +10,21 @@
 
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
+  ros::NodeHandle private_node_handle("~");  // to receive args
+  private_node_handle.param<std::string>("points_src", topic_src_,
+                                         "/points_raw");
+  private_node_handle.param<std::string>("trained_model", trained_model_name_,
+                                         "/bcnn_0111.engine");
+  private_node_handle.param<float>("score_threshold", score_threshold_,
+                                   0.5);
+
   rows_ = 640;
   cols_ = 640;
   siz_ = rows_ * cols_;
   in_feature.resize(siz_ * 8);
 
   std::string package_path = ros::package::getPath("tensorrt_bcnn");
-  std::string engine_path = package_path + "/data/bcnn_0111.engine";
+  std::string engine_path = package_path + "/data/" + trained_model_name_;
 
   std::ifstream fs(engine_path);
   if (fs.is_open()) {
@@ -32,9 +40,6 @@ bool TensorrtBcnnROS::init() {
     return false;
   }
 
-  ros::NodeHandle private_node_handle("~");  // to receive args
-  private_node_handle.param<std::string>("points_src", topic_src_,
-                                         "/points_raw");
   ROS_INFO("[%s] points_src: %s", __APP_NAME__, topic_src_.c_str());
 }
 
@@ -67,13 +72,13 @@ void TensorrtBcnnROS::reset_in_feature() {
   }
 }
 
-cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output){
+cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
   cv::Mat confidence_image(rows_, cols_, CV_8UC1);
   for (int row = 0; row < rows_; ++row) {
     unsigned char *src = confidence_image.ptr<unsigned char>(row);
     for (int col = 0; col < cols_; ++col) {
       int grid = row + col * 640;
-      if (output[grid] > 0.5) {
+      if (output[grid] > score_threshold_) {
         src[cols_ - col - 1] = 255;
       } else {
         src[cols_ - col - 1] = 0;
@@ -83,7 +88,8 @@ cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output){
   return confidence_image;
 }
 
-nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(cv::Mat confidence_image){
+nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
+    cv::Mat confidence_image) {
   nav_msgs::OccupancyGrid confidence_map;
   confidence_map.header = message_header_;
   confidence_map.header.frame_id = "velodyne";
@@ -110,7 +116,6 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(cv::Mat confidence_i
 }
 
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
-
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
       new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromROSMsg(msg, *in_pc_ptr);
@@ -131,7 +136,8 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   float *output = output_data.get();
 
   cv::Mat confidence_image = this->get_confidence_image(output);
-  nav_msgs::OccupancyGrid confidence_map = this->get_confidence_map(confidence_image);
+  nav_msgs::OccupancyGrid confidence_map =
+      this->get_confidence_map(confidence_image);
 
   confidence_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
