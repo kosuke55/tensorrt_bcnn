@@ -15,8 +15,7 @@ bool TensorrtBcnnROS::init() {
                                          "/points_raw");
   private_node_handle.param<std::string>("trained_model", trained_model_name_,
                                          "/bcnn_0111.engine");
-  private_node_handle.param<float>("score_threshold", score_threshold_,
-                                   0.5);
+  private_node_handle.param<float>("score_threshold", score_threshold_, 0.5);
 
   rows_ = 640;
   cols_ = 640;
@@ -48,14 +47,11 @@ TensorrtBcnnROS::~TensorrtBcnnROS() {}
 void TensorrtBcnnROS::createROSPubSub() {
   sub_points_ =
       nh_.subscribe(topic_src_, 1, &TensorrtBcnnROS::pointsCallback, this);
-
-  pub_objects_ =
-      nh_.advertise<autoware_msgs::DynamicObjectWithFeatureArray>("rois", 1);
-  pub_image_ = nh_.advertise<sensor_msgs::Image>(
-      "/perception/tensorrt_bcnn/classified_image", 1);
-  confidence_pub_ = nh_.advertise<sensor_msgs::Image>("confidence_image", 1);
+  confidence_image_pub_ =
+      nh_.advertise<sensor_msgs::Image>("confidence_image", 1);
   confidence_map_pub_ =
       nh_.advertise<nav_msgs::OccupancyGrid>("confidence_map", 1);
+  class_image_pub_ = nh_.advertise<sensor_msgs::Image>("class_image", 1);
 }
 
 void TensorrtBcnnROS::reset_in_feature() {
@@ -86,6 +82,35 @@ cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
     }
   }
   return confidence_image;
+}
+
+cv::Mat TensorrtBcnnROS::get_class_image(const float *output) {
+  cv::Mat class_image(rows_, cols_, CV_8UC3);
+
+  for (int row = 0; row < rows_; ++row) {
+    cv::Vec3b *src = class_image.ptr<cv::Vec3b>(row);
+    for (int col = 0; col < cols_; ++col) {
+      int grid = row + col * cols_;
+      std::vector<float> class_vec{
+          output[grid + siz_], output[grid + siz_ * 2], output[grid + siz_ * 3],
+          output[grid + siz_ * 4], output[grid + siz_ * 5]};
+      std::vector<float>::iterator maxIt = std::max_element(class_vec.begin(), class_vec.end());
+      size_t pred_class = std::distance(class_vec.begin(), maxIt);
+      if (pred_class == 1) {
+        src[cols_ - col - 1] = cv::Vec3b(255, 0, 0);
+      } else if (pred_class == 2) {
+        src[cols_ - col - 1] = cv::Vec3b(255, 160, 0);
+      } else if (pred_class == 3) {
+        src[cols_ - col - 1] = cv::Vec3b(0, 255, 0);
+      } else if (pred_class == 4) {
+        src[cols_ - col - 1] = cv::Vec3b(0, 0, 255);
+      }
+      else {
+        src[cols_ - col - 1] = cv::Vec3b(0, 0, 0);
+      }
+    }
+  }
+  return class_image;
 }
 
 nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
@@ -138,10 +163,15 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   cv::Mat confidence_image = this->get_confidence_image(output);
   nav_msgs::OccupancyGrid confidence_map =
       this->get_confidence_map(confidence_image);
+  cv::Mat class_image = this->get_class_image(output);
 
-  confidence_pub_.publish(
+  confidence_image_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
                          confidence_image)
           .toImageMsg());
   confidence_map_pub_.publish(confidence_map);
+  class_image_pub_.publish(
+      cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::RGB8,
+                         class_image)
+          .toImageMsg());
 }

@@ -4,8 +4,25 @@
     name="$(anon tensorrt_bcnn)" output="screen" >
     <rosparam>
       points_src: points_raw
-      trained_model: bcnn_all_0122.engine
+      trained_model: bcnn_all_class_0125.engine
       score_threshold: 0.8
     </rosparam>
   </node>
+
+  <group ns="bev_camera">
+    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster"
+          args="0 0 -1 0 0 3.141592653589793 velodyne bev 100" />
+    <node name="camera_info" pkg="rostopic" type="rostopic"
+          args="pub camera_info sensor_msgs/CameraInfo
+      '{header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: bev},
+      height: 640, width: 640, distortion_model: 'plumb_bob',
+      D: [0],
+      K: [5.33, 0.0, 320, 0.0, 5.33, 320, 0.0, 0.0, 1.0],
+      R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+      P: [5.33, 0.0, 320, 0.0, 0.0, 5.33, 320, 0.0, 0.0, 0.0, 1.0, 0.0],
+      binning_x: 0, binning_y: 0,
+      roi: {x_offset: 0, y_offset: 0, height: 640, width: 640, do_rectify: false}}' -r 2"
+          output="screen"/>
+  </group>
+
 </launch>
