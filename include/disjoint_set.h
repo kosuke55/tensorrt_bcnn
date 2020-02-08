@@ -17,9 +17,6 @@
 #ifndef MODULES_PERCEPTION_OBSTACLE_COMMON_DISJOINT_SET_H_
 #define MODULES_PERCEPTION_OBSTACLE_COMMON_DISJOINT_SET_H_
 
-// namespace apollo {
-// namespace perception {
-
 template <class T>
 void DisjointSetMakeSet(T *x) {
   x->parent = x;
@@ -68,8 +65,5 @@ void DisjointSetUnion(T *x, T *y) {
     DisjointSetMerge(x, y);
   }
 }
-
-// }  // namespace perception
-// }  // namespace apollo
 
 #endif  // MODULES_PERCEPTION_OBSTACLE_COMMON_DISJOINT_SET_H_

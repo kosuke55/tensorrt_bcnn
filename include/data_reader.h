@@ -22,7 +22,7 @@ struct Bbox {
   int bot;
   float score;
 };
-//[lst<filename>,lst<bbox_vec>]
+
 std::tuple<std::list<std::string>, std::list<std::vector<Bbox>>>
 readObjectLabelFileList(const std::string& fileName);
 }

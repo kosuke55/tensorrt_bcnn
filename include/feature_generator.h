@@ -31,52 +31,19 @@ class FeatureGenerator {
   float min_height_ = 0.0;
   float max_height_ = 0.0;
 
-  // raw feature data
-  // std::vector<float> max_height_data_;
-  // std::vector<float> mean_height_data_;
-  // std::vector<float> count_data_;
-  // std::vector<float> direction_data_;
-  // std::vector<float> top_intensity_data_;
-  // std::vector<float> mean_intensity_data_;
-  // std::vector<float> distance_data_;
-  // std::vector<float> nonempty_data_;
-
-  // float* max_height_data_ = nullptr;
-  // float* mean_height_data_ = nullptr;
-  // float* count_data_ = nullptr;
-  // float* direction_data_ = nullptr;
-  // float* top_intensity_data_ = nullptr;
-  // float* mean_intensity_data_ = nullptr;
-  // float* distance_data_ = nullptr;
-  // float* nonempty_data_ = nullptr;
-
-  // output Caffe blob
-  // caffe::Blob<float>* out_blob_ = nullptr;
-
   std::vector<float> log_table_;
 
-  // point index in feature map
   std::vector<int> map_idx_;
 
   float logCount(int count);
 
  public:
-  // FeatureGenerator() : max_height_data_(width_ * height_, -5),
-  //                      mean_height_data_(width_ * height_, 0),
-  //                      count_data_(width_ * height_, 0),
-  //                      direction_data_(width_ * height_, 0),
-  //                      top_intensity_data_(width_ * height_, 0),
-  //                      mean_intensity_data_(width_ * height_, 0),
-  //                      distance_data_(width_ * height_, 0),
-  //                      nonempty_data_(width_ * height_, 0) {}
   FeatureGenerator() {}
   ~FeatureGenerator() {}
 
-  // bool init(caffe::Blob<float>* out_blob);
   bool init(float *in_feature_ptr);
   void generate(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
                 float *max_height_data_);
-  // cv::Mat& in_feature);
 };
 
 #endif  // FEATURE_GENERATOR_H
