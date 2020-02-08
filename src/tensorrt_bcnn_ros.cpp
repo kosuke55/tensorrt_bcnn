@@ -133,7 +133,6 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
     cv::Mat confidence_image) {
   nav_msgs::OccupancyGrid confidence_map;
   confidence_map.header = message_header_;
-  confidence_map.header.frame_id = "velodyne";
   confidence_map.info.width = 640;
   confidence_map.info.height = 640;
   confidence_map.info.origin.orientation.w = 1;
@@ -190,7 +189,6 @@ void TensorrtBcnnROS::convertDetected2Dynamic(
   d_objects.header = objects.header;
   for (const auto &object : objects.objects) {
     autoware_msgs::DynamicObjectWithFeature d_object;
-    // d_object.object.state.pose.pose = object.pose;
     if (object.label == "person" || object.label == "bike" ||
         object.label == "bicycle") {
       d_object.object.semantic.type = d_object.object.semantic.PEDESTRIAN;
