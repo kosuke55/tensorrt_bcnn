@@ -205,6 +205,7 @@ void TensorrtBcnnROS::convertDetected2Dynamic(
 }
 
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
+
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
       new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromROSMsg(msg, *in_pc_ptr);
