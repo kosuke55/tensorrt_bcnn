@@ -82,6 +82,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
    src/tensorrt_bcnn_main.cpp
    src/tensorrt_bcnn_ros.cpp
    src/feature_generator.cpp
+   src/cluster2d.cpp
    )
 
   add_executable(tensorrt_bcnn

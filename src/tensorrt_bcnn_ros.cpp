@@ -17,6 +17,7 @@ bool TensorrtBcnnROS::init() {
                                          "/bcnn_0111.engine");
   private_node_handle.param<float>("score_threshold", score_threshold_, 0.5);
 
+  range_ = 60;
   rows_ = 640;
   cols_ = 640;
   siz_ = rows_ * cols_;
@@ -32,6 +33,14 @@ bool TensorrtBcnnROS::init() {
   } else {
     ROS_INFO("Could not find %s.", engine_path.c_str());
   }
+
+  cluster2d_.reset(new Cluster2D());
+  if (!cluster2d_->init(rows_, cols_, range_)) {
+    ROS_ERROR("[%s] Fail to Initialize cluster2d for CNNSegmentation",
+              __APP_NAME__);
+    return false;
+  }
+
   feature_generator_.reset(new FeatureGenerator());
   if (!feature_generator_->init(&in_feature[0])) {
     ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
@@ -52,6 +61,12 @@ void TensorrtBcnnROS::createROSPubSub() {
   confidence_map_pub_ =
       nh_.advertise<nav_msgs::OccupancyGrid>("confidence_map", 1);
   class_image_pub_ = nh_.advertise<sensor_msgs::Image>("class_image", 1);
+  points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(
+      "/detection/lidar_detector/points_cluster", 1);
+  objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>(
+      "/detection/lidar_detector/objects", 1);
+  d_objects_pub_ = nh_.advertise<autoware_msgs::DynamicObjectWithFeatureArray>(
+      "labeled_clusters", 1);
 }
 
 void TensorrtBcnnROS::reset_in_feature() {
@@ -141,6 +156,56 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
   return confidence_map;
 }
 
+void TensorrtBcnnROS::pubColoredPoints(
+    const autoware_msgs::DetectedObjectArray &objects_array) {
+  pcl::PointCloud<pcl::PointXYZRGB> colored_cloud;
+  for (size_t object_i = 0; object_i < objects_array.objects.size();
+       object_i++) {
+    pcl::PointCloud<pcl::PointXYZI> object_cloud;
+    pcl::fromROSMsg(objects_array.objects[object_i].pointcloud, object_cloud);
+    int red = (object_i) % 256;
+    int green = (object_i * 7) % 256;
+    int blue = (object_i * 13) % 256;
+
+    for (size_t i = 0; i < object_cloud.size(); i++) {
+      pcl::PointXYZRGB colored_point;
+      colored_point.x = object_cloud[i].x;
+      colored_point.y = object_cloud[i].y;
+      colored_point.z = object_cloud[i].z;
+      colored_point.r = red;
+      colored_point.g = green;
+      colored_point.b = blue;
+      colored_cloud.push_back(colored_point);
+    }
+  }
+  sensor_msgs::PointCloud2 output_colored_cloud;
+  pcl::toROSMsg(colored_cloud, output_colored_cloud);
+  output_colored_cloud.header = message_header_;
+  points_pub_.publish(output_colored_cloud);
+}
+
+void TensorrtBcnnROS::convertDetected2Dynamic(
+    const autoware_msgs::DetectedObjectArray &objects,
+    autoware_msgs::DynamicObjectWithFeatureArray &d_objects) {
+  d_objects.header = objects.header;
+  for (const auto &object : objects.objects) {
+    autoware_msgs::DynamicObjectWithFeature d_object;
+    // d_object.object.state.pose.pose = object.pose;
+    if (object.label == "person" || object.label == "bike" ||
+        object.label == "bicycle") {
+      d_object.object.semantic.type = d_object.object.semantic.PEDESTRIAN;
+    } else if (object.label == "car" || object.label == "bus" ||
+               object.label == "track") {
+      d_object.object.semantic.type = d_object.object.semantic.CAR;
+    } else {
+      d_object.object.semantic.type = d_object.object.semantic.PEDESTRIAN;
+    }
+    d_object.object.semantic.confidence = 1.0;
+    d_object.feature.cluster = object.pointcloud;
+    d_objects.feature_objects.push_back(d_object);
+  }
+}
+
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
       new pcl::PointCloud<pcl::PointXYZI>);
@@ -165,6 +230,32 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   nav_msgs::OccupancyGrid confidence_map =
       this->get_confidence_map(confidence_image);
   cv::Mat class_image = this->get_class_image(output);
+
+  float objectness_thresh = 0.5;
+  bool use_all_grids_for_clustering = true;
+
+  cluster2d_->cluster(output, in_pc_ptr, valid_idx, objectness_thresh,
+                      use_all_grids_for_clustering);
+  cluster2d_->filter(output);
+  cluster2d_->classify(output);
+
+  float confidence_thresh = score_threshold_;
+  float height_thresh = 0.5;
+  int min_pts_num = 3;
+
+  autoware_msgs::DetectedObjectArray objects;
+  objects.header = message_header_;
+  cluster2d_->getObjects(confidence_thresh, height_thresh, min_pts_num, objects,
+                         message_header_);
+
+  autoware_msgs::DynamicObjectWithFeatureArray d_objects;
+
+  convertDetected2Dynamic(objects, d_objects);
+
+  pubColoredPoints(objects);
+
+  objects_pub_.publish(objects);
+  d_objects_pub_.publish(d_objects);
 
   confidence_image_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
