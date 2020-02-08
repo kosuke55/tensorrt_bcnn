@@ -1,9 +1,14 @@
 <launch>
+
+  <arg name="INPUT_CLOUD" default="/points_raw" />
+  <arg name="ENGINE" default="/apollo_cnn.engine" />
+
   <node pkg="tensorrt_bcnn" type="tensorrt_bcnn"
-    name="$(anon tensorrt_bcnn)" output="screen" >
-    <rosparam>
-      points_src: points_raw
-      trained_model: apollo_cnn.engine
+        name="$(anon tensorrt_bcnn)" output="screen" >
+
+    <rosparam subst_value="true">
+      points_src: $(arg INPUT_CLOUD)
+      trained_model: $(arg ENGINE)
       score_threshold: 0.8
     </rosparam>
   </node>
