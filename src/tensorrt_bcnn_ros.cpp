@@ -74,7 +74,7 @@ cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
     unsigned char *src = confidence_image.ptr<unsigned char>(row);
     for (int col = 0; col < cols_; ++col) {
       int grid = row + col * 640;
-      if (output[grid] > score_threshold_) {
+      if (output[grid + siz_ * 3] > score_threshold_) {
         src[cols_ - col - 1] = 255;
       } else {
         src[cols_ - col - 1] = 0;
@@ -92,9 +92,11 @@ cv::Mat TensorrtBcnnROS::get_class_image(const float *output) {
     for (int col = 0; col < cols_; ++col) {
       int grid = row + col * cols_;
       std::vector<float> class_vec{
-          output[grid + siz_], output[grid + siz_ * 2], output[grid + siz_ * 3],
-          output[grid + siz_ * 4], output[grid + siz_ * 5]};
-      std::vector<float>::iterator maxIt = std::max_element(class_vec.begin(), class_vec.end());
+          output[grid + siz_ * 4], output[grid + siz_ * 5],
+          output[grid + siz_ * 6], output[grid + siz_ * 7],
+          output[grid + siz_ * 8], output[grid + siz_ * 9]};
+      std::vector<float>::iterator maxIt =
+          std::max_element(class_vec.begin(), class_vec.end());
       size_t pred_class = std::distance(class_vec.begin(), maxIt);
       if (pred_class == 1) {
         src[cols_ - col - 1] = cv::Vec3b(255, 0, 0);
@@ -104,8 +106,7 @@ cv::Mat TensorrtBcnnROS::get_class_image(const float *output) {
         src[cols_ - col - 1] = cv::Vec3b(0, 255, 0);
       } else if (pred_class == 4) {
         src[cols_ - col - 1] = cv::Vec3b(0, 0, 255);
-      }
-      else {
+      } else {
         src[cols_ - col - 1] = cv::Vec3b(0, 0, 0);
       }
     }

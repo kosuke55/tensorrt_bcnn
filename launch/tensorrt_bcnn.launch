@@ -3,7 +3,7 @@
     name="$(anon tensorrt_bcnn)" output="screen" >
     <rosparam>
       points_src: points_raw
-      trained_model: bcnn_all_class_0125.engine
+      trained_model: apollo_cnn.engine
       score_threshold: 0.8
     </rosparam>
   </node>
