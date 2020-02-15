@@ -55,7 +55,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
    roscpp
    roslib
    pcl_ros
-   autoware_msgs
+   autoware_perception_msgs
    cv_bridge
    )
   set(CMAKE_CXX_STANDARD 11)
@@ -69,7 +69,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
    roscpp
    roslib
    pcl_ros
-   autoware_msgs
+   autoware_perception_msgs
    cv_bridge
    )
 

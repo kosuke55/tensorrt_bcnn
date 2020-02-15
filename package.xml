@@ -13,13 +13,13 @@
     <build_depend>roslib</build_depend>
     <build_depend>cv_bridge</build_depend>
     <build_depend>pcl_ros</build_depend>
-    <build_depend>autoware_msgs</build_depend>
+    <build_depend>autoware_perception_msgs</build_depend>
 
     <run_depend>roscpp</run_depend>
     <run_depend>roslib</run_depend>
     <run_depend>cv_bridge</run_depend>
     <run_depend>pcl_ros</run_depend>
-    <run_depend>autoware_msgs</run_depend>
+    <run_depend>autoware_perception_msgs</run_depend>
 
     <export></export>
 </package>

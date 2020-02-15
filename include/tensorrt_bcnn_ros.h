@@ -5,7 +5,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 
-#include <autoware_msgs/DynamicObjectWithFeatureArray.h>
+#include <autoware_perception_msgs/DynamicObjectWithFeatureArray.h>
 
 // STL
 #include <chrono>
@@ -44,10 +44,10 @@ class TensorrtBcnnROS {
   void imageCallback(const sensor_msgs::Image::ConstPtr &in_image);
   void pointsCallback(const sensor_msgs::PointCloud2 &msg);
   void reset_in_feature();
-  void pubColoredPoints(const autoware_msgs::DetectedObjectArray &objects);
+  void pubColoredPoints(const autoware_perception_msgs::DynamicObjectWithFeatureArray &objects);
   void convertDetected2Dynamic(
-      const autoware_msgs::DetectedObjectArray &objects,
-      autoware_msgs::DynamicObjectWithFeatureArray &d_objects);
+      const autoware_perception_msgs::DynamicObjectWithFeatureArray &objects,
+      autoware_perception_msgs::DynamicObjectWithFeatureArray &d_objects);
   cv::Mat get_confidence_image(const float *output);
   cv::Mat get_class_image(const float *output);
   nav_msgs::OccupancyGrid get_confidence_map(cv::Mat confidence_image);

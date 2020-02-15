@@ -40,8 +40,10 @@
 #include "disjoint_set.h"
 #include "util.h"
 
-#include <autoware_msgs/DetectedObject.h>
-#include <autoware_msgs/DetectedObjectArray.h>
+// #include <autoware_perception_msgs/DynamicObjectWithFeature.h>
+// #include <autoware_perception_msgs/DynamicObjectWithFeatureArray.h>
+#include <autoware_perception_msgs/DynamicObjectWithFeature.h>
+#include <autoware_perception_msgs/DynamicObjectWithFeatureArray.h>
 
 #include <std_msgs/Header.h>
 
@@ -117,10 +119,10 @@ class Cluster2D {
 
   void getObjects(const float confidence_thresh, const float height_thresh,
                   const int min_pts_num,
-                  autoware_msgs::DetectedObjectArray &objects,
+                  autoware_perception_msgs::DynamicObjectWithFeatureArray &objects,
                   const std_msgs::Header &in_header);
 
-  autoware_msgs::DetectedObject obstacleToObject(
+  autoware_perception_msgs::DynamicObjectWithFeature obstacleToObject(
       const Obstacle &in_obstacle, const std_msgs::Header &in_header);
 
  private:

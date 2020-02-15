@@ -29,7 +29,7 @@
           output="screen"/>
   </group>
 
-  <node pkg="detected_objects_visualizer" type="visualize_detected_objects" name="cluster_detect_visualization_01"
-          output="screen" ns="/detection/lidar_detector" />
+  <!-- <node pkg="detected_objects_visualizer" type="visualize_dhetected_objects" name="cluster_detect_visualization_01" -->
+  <!--         output="screen" ns="/detection/lidar_detector" /> -->
 
 </launch>

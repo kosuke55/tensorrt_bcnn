@@ -5,9 +5,6 @@
 #include <string>
 #include "tensorrt_bcnn_ros.h"
 
-// #include <cuda.h>
-// #include <chrono>
-
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
   ros::NodeHandle private_node_handle("~");  // to receive args
@@ -63,10 +60,12 @@ void TensorrtBcnnROS::createROSPubSub() {
   class_image_pub_ = nh_.advertise<sensor_msgs::Image>("class_image", 1);
   points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(
       "/detection/lidar_detector/points_cluster", 1);
-  objects_pub_ = nh_.advertise<autoware_msgs::DetectedObjectArray>(
-      "/detection/lidar_detector/objects", 1);
-  d_objects_pub_ = nh_.advertise<autoware_msgs::DynamicObjectWithFeatureArray>(
-      "labeled_clusters", 1);
+  objects_pub_ =
+      nh_.advertise<autoware_perception_msgs::DynamicObjectWithFeatureArray>(
+          "/detection/lidar_detector/objects", 1);
+  d_objects_pub_ =
+      nh_.advertise<autoware_perception_msgs::DynamicObjectWithFeatureArray>(
+          "labeled_clusters", 1);
 }
 
 void TensorrtBcnnROS::reset_in_feature() {
@@ -156,12 +155,14 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
 }
 
 void TensorrtBcnnROS::pubColoredPoints(
-    const autoware_msgs::DetectedObjectArray &objects_array) {
+    const autoware_perception_msgs::DynamicObjectWithFeatureArray
+        &objects_array) {
   pcl::PointCloud<pcl::PointXYZRGB> colored_cloud;
-  for (size_t object_i = 0; object_i < objects_array.objects.size();
+  for (size_t object_i = 0; object_i < objects_array.feature_objects.size();
        object_i++) {
     pcl::PointCloud<pcl::PointXYZI> object_cloud;
-    pcl::fromROSMsg(objects_array.objects[object_i].pointcloud, object_cloud);
+    pcl::fromROSMsg(objects_array.feature_objects.at(object_i).feature.cluster,
+                    object_cloud);
     int red = (object_i) % 256;
     int green = (object_i * 7) % 256;
     int blue = (object_i * 13) % 256;
@@ -181,27 +182,6 @@ void TensorrtBcnnROS::pubColoredPoints(
   pcl::toROSMsg(colored_cloud, output_colored_cloud);
   output_colored_cloud.header = message_header_;
   points_pub_.publish(output_colored_cloud);
-}
-
-void TensorrtBcnnROS::convertDetected2Dynamic(
-    const autoware_msgs::DetectedObjectArray &objects,
-    autoware_msgs::DynamicObjectWithFeatureArray &d_objects) {
-  d_objects.header = objects.header;
-  for (const auto &object : objects.objects) {
-    autoware_msgs::DynamicObjectWithFeature d_object;
-    if (object.label == "person" || object.label == "bike" ||
-        object.label == "bicycle") {
-      d_object.object.semantic.type = d_object.object.semantic.PEDESTRIAN;
-    } else if (object.label == "car" || object.label == "bus" ||
-               object.label == "track") {
-      d_object.object.semantic.type = d_object.object.semantic.CAR;
-    } else {
-      d_object.object.semantic.type = d_object.object.semantic.PEDESTRIAN;
-    }
-    d_object.object.semantic.confidence = 1.0;
-    d_object.feature.cluster = object.pointcloud;
-    d_objects.feature_objects.push_back(d_object);
-  }
 }
 
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
@@ -241,19 +221,12 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   float height_thresh = 0.5;
   int min_pts_num = 3;
 
-  autoware_msgs::DetectedObjectArray objects;
+  autoware_perception_msgs::DynamicObjectWithFeatureArray objects;
   objects.header = message_header_;
   cluster2d_->getObjects(confidence_thresh, height_thresh, min_pts_num, objects,
                          message_header_);
 
-  autoware_msgs::DynamicObjectWithFeatureArray d_objects;
-
-  convertDetected2Dynamic(objects, d_objects);
-
-  pubColoredPoints(objects);
-
-  objects_pub_.publish(objects);
-  d_objects_pub_.publish(d_objects);
+  d_objects_pub_.publish(objects);
 
   confidence_image_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
