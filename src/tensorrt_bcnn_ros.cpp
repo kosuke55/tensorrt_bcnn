@@ -226,6 +226,8 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   cluster2d_->getObjects(confidence_thresh, height_thresh, min_pts_num, objects,
                          message_header_);
 
+  pubColoredPoints(objects);
+
   d_objects_pub_.publish(objects);
 
   confidence_image_pub_.publish(
