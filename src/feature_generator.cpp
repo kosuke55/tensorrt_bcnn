@@ -86,19 +86,13 @@ void FeatureGenerator::generate(
     top_intensity_data = max_height_data + siz * 4;
     mean_intensity_data = max_height_data + siz * 5;
     nonempty_data = max_height_data + siz * 7;
-  }
-
-  else if (use_constant_feature) {
+  } else if (use_constant_feature) {
     nonempty_data = max_height_data + siz * 5;
-  }
-
-  else if (use_intensity_feature) {
+  } else if (use_intensity_feature) {
     top_intensity_data = max_height_data + siz * 3;
     mean_intensity_data = max_height_data + siz * 4;
     nonempty_data = max_height_data + siz * 5;
-  }
-
-  else {
+  } else {
     nonempty_data = max_height_data + siz * 3;
   }
 
