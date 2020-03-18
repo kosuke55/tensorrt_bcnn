@@ -16,11 +16,8 @@
 
 #include "feature_generator.h"
 
-bool FeatureGenerator::init(float *in_feature_ptr,
-                            int range,
-                            int width,
-                            int height,
-                            const bool use_constant_feature,
+bool FeatureGenerator::init(float *in_feature_ptr, int range, int width,
+                            int height, const bool use_constant_feature,
                             const bool use_intensity_feature) {
   range_ = range;
   width_ = width;
@@ -36,16 +33,15 @@ bool FeatureGenerator::init(float *in_feature_ptr,
 
   int siz = height_ * width_;
   float *direction_data, *distance_data;
-  if (use_constant_feature &&  use_intensity_feature) {
+  if (use_constant_feature && use_intensity_feature) {
     direction_data = in_feature_ptr + siz * 3;
     distance_data = in_feature_ptr + siz * 6;
-  }
-  else if (use_constant_feature ) {
-      direction_data = in_feature_ptr + siz * 3;
-      distance_data = in_feature_ptr + siz * 4;
+  } else if (use_constant_feature) {
+    direction_data = in_feature_ptr + siz * 3;
+    distance_data = in_feature_ptr + siz * 4;
   }
 
-  if (use_constant_feature ) {
+  if (use_constant_feature) {
     for (int row = 0; row < height_; ++row) {
       for (int col = 0; col < width_; ++col) {
         int idx = row * width_ + col;
@@ -57,8 +53,8 @@ bool FeatureGenerator::init(float *in_feature_ptr,
         float center_y = Pixel2Pc(col, width_, range_);
         constexpr double K_CV_PI = 3.1415926535897932384626433832795;
         // normaliztion. -0.5~0.5
-        direction_data[idx] =
-            static_cast<float>(std::atan2(center_y, center_x) / (2.0 * K_CV_PI));
+        direction_data[idx] = static_cast<float>(
+            std::atan2(center_y, center_x) / (2.0 * K_CV_PI));
         distance_data[idx] =
             static_cast<float>(std::hypot(center_x, center_y) / 60.0 - 0.5);
       }
@@ -76,11 +72,8 @@ float FeatureGenerator::logCount(int count) {
 }
 
 void FeatureGenerator::generate(
-    const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
-    float *max_height_data,
-    const bool use_constant_feature,
-    const bool use_intensity_feature) {
-
+    const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr, float *max_height_data,
+    const bool use_constant_feature, const bool use_intensity_feature) {
   const auto &points = pc_ptr->points;
   int siz = height_ * width_;
   float *mean_height_data, *count_data, *top_intensity_data,
@@ -89,7 +82,7 @@ void FeatureGenerator::generate(
   mean_height_data = max_height_data + siz;
   count_data = max_height_data + siz * 2;
 
-  if (use_constant_feature &&  use_intensity_feature) {
+  if (use_constant_feature && use_intensity_feature) {
     top_intensity_data = max_height_data + siz * 4;
     mean_intensity_data = max_height_data + siz * 5;
     nonempty_data = max_height_data + siz * 7;
@@ -106,7 +99,7 @@ void FeatureGenerator::generate(
   }
 
   else {
-  nonempty_data = max_height_data + siz * 3;
+    nonempty_data = max_height_data + siz * 3;
   }
 
   map_idx_.resize(points.size());

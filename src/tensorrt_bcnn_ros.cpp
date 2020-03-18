@@ -5,7 +5,6 @@
 #include <string>
 #include "tensorrt_bcnn_ros.h"
 
-#include <chrono>
 
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
@@ -18,8 +17,10 @@ bool TensorrtBcnnROS::init() {
   private_node_handle.param<int>("range", range_, 60);
   private_node_handle.param<int>("width", cols_, 640);
   private_node_handle.param<int>("height", rows_, 640);
-  private_node_handle.param<bool>("use_intensity_feature", use_intensity_feature_, true);
-  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_, true);
+  private_node_handle.param<bool>("use_intensity_feature",
+                                  use_intensity_feature_, true);
+  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_,
+                                  true);
 
   siz_ = rows_ * cols_;
   if (use_intensity_feature_) {
@@ -50,7 +51,9 @@ bool TensorrtBcnnROS::init() {
   }
 
   feature_generator_.reset(new FeatureGenerator());
-  if (!feature_generator_->init(&in_feature[0], range_, cols_, rows_, use_constant_feature_, use_intensity_feature_)) {
+  if (!feature_generator_->init(&in_feature[0], range_, cols_, rows_,
+                                use_constant_feature_,
+                                use_intensity_feature_)) {
     ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
               __APP_NAME__);
     return false;
@@ -80,7 +83,7 @@ void TensorrtBcnnROS::createROSPubSub() {
 }
 
 void TensorrtBcnnROS::reset_in_feature() {
-  if (use_constant_feature_ &&  use_intensity_feature_) {
+  if (use_constant_feature_ && use_intensity_feature_) {
     for (int i = 0; i < siz_ * 8; ++i) {
       if (i < siz_) {
         // max_height_data_
@@ -88,12 +91,10 @@ void TensorrtBcnnROS::reset_in_feature() {
       } else if (siz_ <= i && i < siz_ * 3) {
         // mean_height_data_, count_data_
         in_feature[i] = 0;
-      }
-      else if (siz_ * 4 <= i && i < siz_ * 6 ) {
+      } else if (siz_ * 4 <= i && i < siz_ * 6) {
         // top_intensity_data_, mean_intensity_data_
         in_feature[i] = 0;
-      }
-      else if (siz_ * 7 <= i && i < siz_ * 8) {
+      } else if (siz_ * 7 <= i && i < siz_ * 8) {
         // nonempty_data_
         in_feature[i] = 0;
       }
@@ -108,14 +109,12 @@ void TensorrtBcnnROS::reset_in_feature() {
       } else if (siz_ <= i && i < siz_ * 3) {
         // mean_height_data_, count_data_
         in_feature[i] = 0;
-      }
-      else if (siz_ * 4 <= i && i < siz_ * 6 ) {
+      } else if (siz_ * 4 <= i && i < siz_ * 6) {
         // nonempty_data_
         in_feature[i] = 0;
       }
     }
   }
-
 
   else {
     for (int i = 0; i < siz_ * channels_; ++i) {
@@ -126,7 +125,6 @@ void TensorrtBcnnROS::reset_in_feature() {
       }
     }
   }
-
 }
 
 cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
@@ -240,9 +238,9 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   indices.resize(in_pc_ptr->size());
   std::iota(indices.begin(), indices.end(), 0);
   message_header_ = msg.header;
-
   this->reset_in_feature();
-  feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_, use_intensity_feature_);
+  feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
+                               use_intensity_feature_);
 
   int outputCount = net_ptr_->getOutputSize() / sizeof(float);
   std::unique_ptr<float[]> output_data(new float[outputCount]);
@@ -251,6 +249,7 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   float *output = output_data.get();
 
   cv::Mat confidence_image = this->get_confidence_image(output);
+
   nav_msgs::OccupancyGrid confidence_map =
       this->get_confidence_map(confidence_image);
   cv::Mat class_image = this->get_class_image(output);
