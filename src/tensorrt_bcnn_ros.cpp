@@ -13,12 +13,21 @@ bool TensorrtBcnnROS::init() {
   private_node_handle.param<std::string>("trained_model", trained_model_name_,
                                          "/bcnn_0111.engine");
   private_node_handle.param<float>("score_threshold", score_threshold_, 0.5);
+  private_node_handle.param<int>("range", range_, 60);
+  private_node_handle.param<int>("width", cols_, 640);
+  private_node_handle.param<int>("height", rows_, 640);
+  private_node_handle.param<bool>("use_intensity_feature", use_intensity_feature_, false);
+  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_, false);
 
-  range_ = 60;
-  rows_ = 640;
-  cols_ = 640;
   siz_ = rows_ * cols_;
-  in_feature.resize(siz_ * 8);
+  if (use_intensity_feature_) {
+    channels_ += 2;
+  }
+  if (use_constant_feature_) {
+    channels_ += 2;
+  }
+
+  in_feature.resize(siz_ * channels_);
 
   std::string package_path = ros::package::getPath("tensorrt_bcnn");
   std::string engine_path = package_path + "/data/" + trained_model_name_;
@@ -39,7 +48,7 @@ bool TensorrtBcnnROS::init() {
   }
 
   feature_generator_.reset(new FeatureGenerator());
-  if (!feature_generator_->init(&in_feature[0])) {
+  if (!feature_generator_->init(&in_feature[0], range_, cols_, rows_, use_constant_feature_, use_intensity_feature_)) {
     ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
               __APP_NAME__);
     return false;
@@ -69,17 +78,53 @@ void TensorrtBcnnROS::createROSPubSub() {
 }
 
 void TensorrtBcnnROS::reset_in_feature() {
-  for (int i = 0; i < siz_ * 8; ++i) {
-    if (i < siz_) {
-      in_feature[i] = -5;
-    } else if (siz_ <= i && i < siz_ * 3) {
-      in_feature[i] = 0;
-    } else if (siz_ * 4 <= i && i < siz_ * 6) {
-      in_feature[i] = 0;
-    } else if (siz_ * 7 <= i && i < siz_ * 8) {
-      in_feature[i] = 0;
+  if (use_constant_feature_ &&  use_intensity_feature_) {
+    for (int i = 0; i < siz_ * 8; ++i) {
+      if (i < siz_) {
+        // max_height_data_
+        in_feature[i] = -5;
+      } else if (siz_ <= i && i < siz_ * 3) {
+        // mean_height_data_, count_data_
+        in_feature[i] = 0;
+      }
+      else if (siz_ * 4 <= i && i < siz_ * 6 ) {
+        // top_intensity_data_, mean_intensity_data_
+        in_feature[i] = 0;
+      }
+      else if (siz_ * 7 <= i && i < siz_ * 8) {
+        // nonempty_data_
+        in_feature[i] = 0;
+      }
     }
   }
+
+  else if (use_constant_feature_) {
+    for (int i = 0; i < siz_ * 6; ++i) {
+      if (i < siz_) {
+        // max_height_data_
+        in_feature[i] = -5;
+      } else if (siz_ <= i && i < siz_ * 3) {
+        // mean_height_data_, count_data_
+        in_feature[i] = 0;
+      }
+      else if (siz_ * 4 <= i && i < siz_ * 6 ) {
+        // nonempty_data_
+        in_feature[i] = 0;
+      }
+    }
+  }
+
+
+  else {
+    for (int i = 0; i < siz_ * channels_; ++i) {
+      if (i < siz_) {
+        in_feature[i] = -5;
+      } else {
+        in_feature[i] = 0;
+      }
+    }
+  }
+
 }
 
 cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
@@ -87,7 +132,7 @@ cv::Mat TensorrtBcnnROS::get_confidence_image(const float *output) {
   for (int row = 0; row < rows_; ++row) {
     unsigned char *src = confidence_image.ptr<unsigned char>(row);
     for (int col = 0; col < cols_; ++col) {
-      int grid = row + col * 640;
+      int grid = row + col * rows_;
       if (output[grid + siz_ * 3] > score_threshold_) {
         src[cols_ - col - 1] = 255;
       } else {
@@ -132,17 +177,17 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
     cv::Mat confidence_image) {
   nav_msgs::OccupancyGrid confidence_map;
   confidence_map.header = message_header_;
-  confidence_map.info.width = 640;
-  confidence_map.info.height = 640;
+  confidence_map.info.width = cols_;
+  confidence_map.info.height = rows_;
   confidence_map.info.origin.orientation.w = 1;
-  float resolution = 120. / 640.;
+  float resolution = range_ * 2. / cols_;
   confidence_map.info.resolution = resolution;
-  confidence_map.info.origin.position.x = -((640 + 1) * resolution * 0.5f);
-  confidence_map.info.origin.position.y = -((640 + 1) * resolution * 0.5f);
+  confidence_map.info.origin.position.x = -((cols_ + 1) * resolution * 0.5f);
+  confidence_map.info.origin.position.y = -((rows_ + 1) * resolution * 0.5f);
   int data;
-  for (int i = 640 - 1; i >= 0; i--) {
-    for (unsigned int j = 0; j < 640; j++) {
-      data = confidence_image.data[i * 640 + j];
+  for (int i = rows_ - 1; i >= 0; i--) {
+    for (unsigned int j = 0; j < cols_; j++) {
+      data = confidence_image.data[i * cols_ + j];
       if (data >= 123 && data <= 131) {
         confidence_map.data.push_back(-1);
       } else if (data >= 251 && data <= 259) {
@@ -195,8 +240,7 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   message_header_ = msg.header;
 
   this->reset_in_feature();
-
-  feature_generator_->generate(in_pc_ptr, &in_feature[0]);
+  feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_, use_intensity_feature_);
 
   int outputCount = net_ptr_->getOutputSize() / sizeof(float);
   std::unique_ptr<float[]> output_data(new float[outputCount]);

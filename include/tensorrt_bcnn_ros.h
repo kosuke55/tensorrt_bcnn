@@ -58,6 +58,10 @@ class TensorrtBcnnROS {
   int rows_;
   int cols_;
   int siz_;
+  int channels_ = 4;
+  bool use_intensity_feature_;
+  bool use_constant_feature_;
+
   std::vector<float> in_feature;
 
  public:

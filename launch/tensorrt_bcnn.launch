@@ -1,16 +1,37 @@
 <launch>
 
-  <arg name="INPUT_CLOUD" default="/points_raw" />
-  <arg name="ENGINE" default="/apollo_cnn.engine" />
+  <!-- <arg name="INPUT_CLOUD" default="/points_raw" /> -->
+  <arg name="INPUT_CLOUD" default="/velodyne_points" />
+
+  <arg name="MODEL" default="model_64" />
+  <arg name="ENGINE_64" default="apollo_cnn.engine" />
+  <arg name="ENGINE_128" default="vls128/deploy.engine" />
 
   <node pkg="tensorrt_bcnn" type="tensorrt_bcnn"
         name="$(anon tensorrt_bcnn)" output="screen" >
 
-    <rosparam subst_value="true">
+    <rosparam if="$(eval MODEL=='model_64')" subst_value="true">
       points_src: $(arg INPUT_CLOUD)
-      trained_model: $(arg ENGINE)
+      trained_model: $(arg ENGINE_64)
       score_threshold: 0.8
+      range: 60
+      width: 640
+      height: 640
+      use_intensity_feature: true
+      use_constant_feature: true
     </rosparam>
+
+    <rosparam if="$(eval MODEL=='model_128')" subst_value="true">
+      points_src: $(arg INPUT_CLOUD)
+      trained_model: $(arg ENGINE_128)
+      score_threshold: 0.8
+      range: 90
+      width: 864
+      height: 864
+      use_intensity_feature: false
+      use_constant_feature: false
+    </rosparam>
+
   </node>
 
   <group ns="bev_camera">

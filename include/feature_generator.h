@@ -41,9 +41,13 @@ class FeatureGenerator {
   FeatureGenerator() {}
   ~FeatureGenerator() {}
 
-  bool init(float *in_feature_ptr);
+  bool init(float *in_feature_ptr, int range, int width, int height,
+            const bool use_constant_feature, const bool use_intensity_feature);
+
   void generate(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_ptr,
-                float *max_height_data_);
+                float *max_height_data,
+                const bool use_constant_feature,
+                const bool use_intensity_feature);
 };
 
 #endif  // FEATURE_GENERATOR_H
