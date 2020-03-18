@@ -5,19 +5,21 @@
 #include <string>
 #include "tensorrt_bcnn_ros.h"
 
+#include <chrono>
+
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
   ros::NodeHandle private_node_handle("~");  // to receive args
   private_node_handle.param<std::string>("points_src", topic_src_,
                                          "/points_raw");
   private_node_handle.param<std::string>("trained_model", trained_model_name_,
-                                         "/bcnn_0111.engine");
-  private_node_handle.param<float>("score_threshold", score_threshold_, 0.5);
+                                         "apollo_cnn.engine");
+  private_node_handle.param<float>("score_threshold", score_threshold_, 0.8);
   private_node_handle.param<int>("range", range_, 60);
   private_node_handle.param<int>("width", cols_, 640);
   private_node_handle.param<int>("height", rows_, 640);
-  private_node_handle.param<bool>("use_intensity_feature", use_intensity_feature_, false);
-  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_, false);
+  private_node_handle.param<bool>("use_intensity_feature", use_intensity_feature_, true);
+  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_, true);
 
   siz_ = rows_ * cols_;
   if (use_intensity_feature_) {
