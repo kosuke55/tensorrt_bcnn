@@ -19,8 +19,14 @@ bool TensorrtBcnnROS::init() {
   private_node_handle.param<int>("height", rows_, 640);
   private_node_handle.param<bool>("use_intensity_feature",
                                   use_intensity_feature_, true);
-  private_node_handle.param<bool>("use_constant_feature", use_constant_feature_,
-                                  true);
+  private_node_handle.param<bool>("use_constant_feature",
+                                  use_constant_feature_, true);
+  private_node_handle.param<bool>("viz_confidence_image",
+                                  viz_confidence_image_, true);
+  private_node_handle.param<bool>("viz_class_image",
+                                  viz_class_image_, false);
+  private_node_handle.param<bool>("pub_colored_points",
+                                  pub_colored_points_, false);
 
   siz_ = rows_ * cols_;
   if (use_intensity_feature_) {
@@ -275,13 +281,27 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
 
   d_objects_pub_.publish(objects);
 
-  confidence_image_pub_.publish(
-      cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
-                         confidence_image)
-          .toImageMsg());
-  confidence_map_pub_.publish(confidence_map);
+  if (viz_confidence_image_){
+    cv::Mat confidence_image = this->get_confidence_image(output);
+    nav_msgs::OccupancyGrid confidence_map =
+        this->get_confidence_map(confidence_image);
+
+    confidence_image_pub_.publish(
+        cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::MONO8,
+                           confidence_image)
+        .toImageMsg());
+    confidence_map_pub_.publish(confidence_map);
+  }
+
+  if (viz_class_image_){
+  cv::Mat class_image = this->get_class_image(output);
   class_image_pub_.publish(
       cv_bridge::CvImage(message_header_, sensor_msgs::image_encodings::RGB8,
                          class_image)
           .toImageMsg());
+  }
+
+  if (pub_colored_points_){
+    pubColoredPoints(objects);
+  }
 }

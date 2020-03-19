@@ -7,6 +7,10 @@
   <arg name="ENGINE_64" default="apollo_cnn.engine" />
   <arg name="ENGINE_128" default="vls128/deploy.engine" />
 
+  <arg name="VIZ_CONFIDENCE_IMAGE" default="false" />
+  <arg name="VIZ_CLASS_IMAGE" default="false" />
+  <arg name="PUB_COLORED_POINTS" default="false" />
+
   <node pkg="tensorrt_bcnn" type="tensorrt_bcnn"
         name="$(anon tensorrt_bcnn)" output="screen" >
 
@@ -19,6 +23,9 @@
       height: 640
       use_intensity_feature: true
       use_constant_feature: true
+      viz_confidence_image: $(arg VIZ_CONFIDENCE_IMAGE)
+      viz_class_image: $(arg VIZ_CLASS_IMAGE)
+      pub_colored_points: $(arg PUB_COLORED_POINTS)
     </rosparam>
 
     <rosparam if="$(eval MODEL=='model_128')" subst_value="true">
@@ -30,6 +37,9 @@
       height: 864
       use_intensity_feature: false
       use_constant_feature: false
+      viz_confidence_image: $(arg VIZ_CONFIDENCE_IMAGE)
+      viz_class_image: $(arg VIZ_CLASS_IMAGE)
+      pub_colored_points: $(arg PUB_COLORED_POINTS)
     </rosparam>
 
   </node>

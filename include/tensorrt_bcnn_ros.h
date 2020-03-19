@@ -61,6 +61,9 @@ class TensorrtBcnnROS {
   int channels_ = 4;
   bool use_intensity_feature_;
   bool use_constant_feature_;
+  bool viz_confidence_image_;
+  bool viz_class_image_;
+  bool pub_colored_points_;
 
   std::vector<float> in_feature;
 
