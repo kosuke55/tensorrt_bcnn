@@ -254,12 +254,6 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   net_ptr_->doInference(in_feature.data(), output_data.get());
   float *output = output_data.get();
 
-  cv::Mat confidence_image = this->get_confidence_image(output);
-
-  nav_msgs::OccupancyGrid confidence_map =
-      this->get_confidence_map(confidence_image);
-  cv::Mat class_image = this->get_class_image(output);
-
   float objectness_thresh = 0.5;
   bool use_all_grids_for_clustering = true;
 
