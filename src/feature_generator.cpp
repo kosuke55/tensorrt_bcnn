@@ -122,10 +122,10 @@ void FeatureGenerator::generate(
     float pi = points[i].intensity / 255.0;
     if (max_height_data[idx] < pz) {
       max_height_data[idx] = pz;
-      // top_intensity_data[idx] = pi;  // not I_max but I of z_max ?
+      top_intensity_data[idx] = pi;  // not I_max but I of z_max ?
     }
     mean_height_data[idx] += static_cast<float>(pz);
-    // mean_intensity_data[idx] += static_cast<float>(pi);
+    mean_intensity_data[idx] += static_cast<float>(pi);
     count_data[idx] += static_cast<float>(1);
   }
   for (int i = 0; i < siz; ++i) {
@@ -134,7 +134,7 @@ void FeatureGenerator::generate(
       max_height_data[i] = static_cast<float>(0);
     } else {
       mean_height_data[i] /= count_data[i];
-      // mean_intensity_data[i] /= count_data[i];
+      mean_intensity_data[i] /= count_data[i];
       nonempty_data[i] = static_cast<float>(1);
     }
     count_data[i] = logCount(static_cast<int>(count_data[i]));
