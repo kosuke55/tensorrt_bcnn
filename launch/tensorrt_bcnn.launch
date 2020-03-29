@@ -44,7 +44,7 @@
 
   </node>
 
-  <group ns="bev_camera">
+  <group if="$(eval VIZ_CLASS_IMAGE)" ns="bev_camera">
     <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster"
           args="0 0 -1 0 0 3.141592653589793 velodyne bev 100" />
     <node name="camera_info" pkg="rostopic" type="rostopic"
