@@ -17,9 +17,10 @@
 #define FEATURE_GENERATOR_H
 
 #include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
+// #include <pcl_ros/point_cloud.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl_ros/transforms.h>
 #include <opencv2/core/core.hpp>
-
 #include "util.h"
 
 class FeatureGenerator {
@@ -28,11 +29,13 @@ class FeatureGenerator {
   int height_ = 640;
   int range_ = 0;
 
+  const int kMaxPointCloudGPUSize = 120000;
+  const int kGPUThreadSize = 512;
+
   float min_height_ = 0.0;
   float max_height_ = 0.0;
 
   std::vector<float> log_table_;
-
   std::vector<int> map_idx_;
 
   float logCount(int count);

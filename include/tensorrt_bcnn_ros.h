@@ -18,6 +18,7 @@
 #include "cluster2d.h"
 #include "data_reader.h"
 #include "feature_generator.h"
+#include "feature_generator_cuda.h"
 
 #define __APP_NAME__ "tensorrt_bcnn"
 
@@ -53,6 +54,7 @@ class TensorrtBcnnROS {
   nav_msgs::OccupancyGrid get_confidence_map(cv::Mat confidence_image);
 
   std::shared_ptr<FeatureGenerator> feature_generator_;
+  std::shared_ptr<FeatureGeneratorCuda> feature_generator_cuda_;
   std_msgs::Header message_header_;
   int range_;
   int rows_;
@@ -66,6 +68,7 @@ class TensorrtBcnnROS {
   bool pub_colored_points_;
 
   std::vector<float> in_feature;
+  // float in_feature_;
 
  public:
   TensorrtBcnnROS(/* args */);

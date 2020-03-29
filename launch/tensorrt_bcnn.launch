@@ -1,7 +1,7 @@
 <launch>
 
-  <!-- <arg name="INPUT_CLOUD" default="/points_raw" /> -->
-  <arg name="INPUT_CLOUD" default="/velodyne_points" />
+  <arg name="INPUT_CLOUD" default="/points_raw" />
+  <!-- <arg name="INPUT_CLOUD" default="/velodyne_points" /> -->
 
   <arg name="MODEL" default="model_64" />
   <arg name="ENGINE_64" default="apollo_cnn.engine" />

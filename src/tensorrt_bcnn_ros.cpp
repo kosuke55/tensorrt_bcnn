@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include "tensorrt_bcnn_ros.h"
-
+#include <chrono>
 
 TensorrtBcnnROS::TensorrtBcnnROS(/* args */) : pnh_("~") {}
 bool TensorrtBcnnROS::init() {
@@ -56,15 +56,25 @@ bool TensorrtBcnnROS::init() {
     return false;
   }
 
-  feature_generator_.reset(new FeatureGenerator());
-  if (!feature_generator_->init(&in_feature[0], range_, cols_, rows_,
+  // feature_generator_.reset(new FeatureGenerator());
+  // if (!feature_generator_->init(&in_feature[0], range_, cols_, rows_,
+  //                               use_constant_feature_,
+  //                               use_intensity_feature_)) {
+  //   ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
+  //             __APP_NAME__);
+  //   return false;
+  // }
+
+
+  feature_generator_cuda_.reset(new FeatureGeneratorCuda());
+  if (!feature_generator_cuda_->init(range_, cols_, rows_,
                                 use_constant_feature_,
                                 use_intensity_feature_)) {
     ROS_ERROR("[%s] Fail to Initialize feature generator for CNNSegmentation",
               __APP_NAME__);
     return false;
   }
-
+  
   ROS_INFO("[%s] points_src: %s", __APP_NAME__, topic_src_.c_str());
 }
 
@@ -236,6 +246,8 @@ void TensorrtBcnnROS::pubColoredPoints(
 }
 
 void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
+  std::chrono::system_clock::time_point start,  end;
+  start = std::chrono::system_clock::now();
   pcl::PointCloud<pcl::PointXYZI>::Ptr in_pc_ptr(
       new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromROSMsg(msg, *in_pc_ptr);
@@ -245,13 +257,20 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   std::iota(indices.begin(), indices.end(), 0);
   message_header_ = msg.header;
   this->reset_in_feature();
-  feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
+  // feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
+  //                              use_intensity_feature_);
+  std::cout << "pc1" << std::endl;
+  feature_generator_cuda_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
                                use_intensity_feature_);
+  std::cout << "pc2" << std::endl;
 
   int outputCount = net_ptr_->getOutputSize() / sizeof(float);
   std::unique_ptr<float[]> output_data(new float[outputCount]);
 
-  net_ptr_->doInference(in_feature.data(), output_data.get());
+  // net_ptr_->doInference(in_feature.data(), output_data.get());
+  std::cout << "pc3" << std::endl;
+  net_ptr_->doInference(feature_generator_cuda_->in_feature_, output_data.get());
+  std::cout << "pc4" << std::endl;
   float *output = output_data.get();
 
   float objectness_thresh = 0.5;
@@ -272,6 +291,12 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
                          message_header_);
 
   d_objects_pub_.publish(objects);
+
+  end = std::chrono::system_clock::now();
+  double elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+          .count();
+  std::cout << "elapsed --  " << elapsed << std::endl;
 
   if (viz_confidence_image_){
     cv::Mat confidence_image = this->get_confidence_image(output);

@@ -58,6 +58,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
    autoware_perception_msgs
    cv_bridge
    )
+ # find_package(Boost REQUIRED COMPONENTS system)
   set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_MWAITXINTRIN_H_INCLUDED")
@@ -77,6 +78,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
    include
    lib/include
    ${catkin_INCLUDE_DIRS}
+   ${CUDA_LIBRARIES_DIRS}
   )
   set(SOURCE_FILES
    src/tensorrt_bcnn_main.cpp
@@ -88,18 +90,40 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   add_executable(tensorrt_bcnn
          ${SOURCE_FILES})
 
-  add_dependencies(tensorrt_bcnn
-         ${catkin_EXPORTED_TARGETS}
-         )
+  # add_dependencies(tensorrt_bcnn
+  #        ${catkin_EXPORTED_TARGETS}
+  #        )
 
 
   cuda_add_library(gpu_tensorrt_bcnn_lib
-         lib/src/UpsampleLayer.cu
-         )
+    lib/src/UpsampleLayer.cu
+    src/feature_generator.cu
+    )
+
+  # cuda_add_executable(hoge
+  #   src/feature_generator.cu
+  #   )
+
+  # add_executable(hoge
+  #  src/feature_generator_tmp.cpp
+  #  )
+  # target_link_libraries(hoge
+  #   ${CUDA_LIBRARIES}
+  #   ${catkin_LIBRARIES}
+  #   ${PCL_LIBRARIES}
+  #        )
+  # target_link_libraries(hoge
+  #   ${Boost_LIBRARY_DIRS}
+  #  )
+
+
+ # rosbuild_link_boost(hoge signals)
+ # rosbuild_link_boost(hoge systems)
 
   target_link_libraries(gpu_tensorrt_bcnn_lib
-   ${CUDA_LIBRARIES}
-  )
+    ${CUDA_LIBRARIES}
+    # ${catkin_LIBRARIES}
+   )
 
   add_library(tensorrt_bcnn_lib
          lib/src/TrtNet.cpp
