@@ -29,6 +29,7 @@ bool TensorrtBcnnROS::init() {
                                   pub_colored_points_, false);
 
   siz_ = rows_ * cols_;
+  std::cout << "siz_  " << siz_ << std::endl;
   if (use_intensity_feature_) {
     channels_ += 2;
   }
@@ -256,11 +257,14 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   indices.resize(in_pc_ptr->size());
   std::iota(indices.begin(), indices.end(), 0);
   message_header_ = msg.header;
-  this->reset_in_feature();
+  // this->reset_in_feature();
   // feature_generator_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
   //                              use_intensity_feature_);
+  float *in_feature_tmp;
   std::cout << "pc1" << std::endl;
-  feature_generator_cuda_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
+  // feature_generator_cuda_->generate(in_pc_ptr, &in_feature[0], use_constant_feature_,
+  //                              use_intensity_feature_);
+  feature_generator_cuda_->generate(in_pc_ptr, in_feature_tmp, use_constant_feature_,
                                use_intensity_feature_);
   std::cout << "pc2" << std::endl;
 
@@ -269,7 +273,9 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
 
   // net_ptr_->doInference(in_feature.data(), output_data.get());
   std::cout << "pc3" << std::endl;
-  net_ptr_->doInference(feature_generator_cuda_->in_feature_, output_data.get());
+  // net_ptr_->doInference(feature_generator_cuda_->in_feature_, output_data.get());
+  std::cout << feature_generator_cuda_->in_feature_ << "   " << in_feature_tmp << std::endl;
+  net_ptr_->doInference(in_feature_tmp, output_data.get());
   std::cout << "pc4" << std::endl;
   float *output = output_data.get();
 
@@ -299,7 +305,8 @@ void TensorrtBcnnROS::pointsCallback(const sensor_msgs::PointCloud2 &msg) {
   std::cout << "elapsed --  " << elapsed << std::endl;
 
   if (viz_confidence_image_){
-    cv::Mat confidence_image = this->get_confidence_image(output);
+    // cv::Mat confidence_image = this->get_confidence_image(output);
+    cv::Mat confidence_image = this->get_confidence_image(feature_generator_cuda_->in_feature_ + siz_ * 7);
     nav_msgs::OccupancyGrid confidence_map =
         this->get_confidence_map(confidence_image);
 

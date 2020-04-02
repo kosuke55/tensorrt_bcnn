@@ -7,7 +7,7 @@
   <arg name="ENGINE_64" default="apollo_cnn.engine" />
   <arg name="ENGINE_128" default="vls128/deploy.engine" />
 
-  <arg name="VIZ_CONFIDENCE_IMAGE" default="false" />
+  <arg name="VIZ_CONFIDENCE_IMAGE" default="true" />
   <arg name="VIZ_CLASS_IMAGE" default="false" />
   <arg name="PUB_COLORED_POINTS" default="false" />
 
@@ -17,7 +17,7 @@
     <rosparam if="$(eval MODEL=='model_64')" subst_value="true">
       points_src: $(arg INPUT_CLOUD)
       trained_model: $(arg ENGINE_64)
-      score_threshold: 0.8
+      score_threshold: 0.1
       range: 60
       width: 640
       height: 640

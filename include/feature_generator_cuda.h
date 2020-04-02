@@ -53,6 +53,7 @@ class FeatureGeneratorCuda {
 
   pcl::PointXYZI* pc_gpu_ = nullptr;
   std::vector<int> map_idx_;
+  // int* map_idx_;
   int* map_idx_gpu_ = nullptr;
   int pc_gpu_size_ = 0;
 

@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define N   10
+
 
 static void HandleError( cudaError_t err,
                          const char *file,
@@ -32,6 +34,17 @@ static void HandleError( cudaError_t err,
 }
 
 #define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
+
+#define cudaSafeCall(call)  \
+        do {\
+            cudaError_t err = call;\
+            if (cudaSuccess != err) \
+            {\
+                std::cerr << "CUDA error in " << __FILE__ << "(" << __LINE__ << "): " \
+                    << cudaGetErrorString(err);\
+                exit(EXIT_FAILURE);\
+            }\
+        } while(0)
 
 #define CUDA_KERNEL_LOOP(i, n) \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
@@ -188,11 +201,28 @@ bool FeatureGeneratorCuda::init(int range, int width,
             static_cast<float>(std::hypot(center_x, center_y) / 60.0 - 0.5);
       }
     }
+    // For developing.
+    // std::memcpy(direction_data_, direction_data.data(),
+    //        direction_data.size() * sizeof(float));
+    // std::memcpy(distance_data_, distance_data.data(),
+    //            distance_data.size() * sizeof(float));
+    // memory copy direction and distance features
+    std::cout << "direction_data.size()  " << direction_data.size() << std::endl;
+    // cudaMemcpy(direction_data_, direction_data.data(),
+    //            direction_data.size() * sizeof(float), cudaMemcpyHostToHost);
+    // cudaMemcpy(distance_data_, distance_data.data(),
+    //            distance_data.size() * sizeof(float), cudaMemcpyHostToHost);
+
+    cudaMemcpy(in_feature_ + map_size * 3, direction_data.data(),
+               direction_data.size() * sizeof(float), cudaMemcpyHostToHost);
+    cudaMemcpy(in_feature_ + map_size * 6, distance_data.data(),
+               distance_data.size() * sizeof(float), cudaMemcpyHostToHost);
+
   // memory copy direction and distance features
-  cudaMemcpy(direction_data_, direction_data.data(),
-             direction_data.size() * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(distance_data_, distance_data.data(),
-             distance_data.size() * sizeof(float), cudaMemcpyHostToDevice);
+  // cudaMemcpy(direction_data_, direction_data.data(),
+  //            direction_data.size() * sizeof(float), cudaMemcpyHostToDevice);
+  // cudaMemcpy(distance_data_, distance_data.data(),
+  //            distance_data.size() * sizeof(float), cudaMemcpyHostToDevice);
   }
 
 
@@ -214,26 +244,28 @@ void FeatureGeneratorCuda::generate(
   const auto &points = pc_ptr->points;
   std::cout << "g1" << std::endl;
   int map_size = height_ * width_;
-  std::cout << "g1" << std::endl;
+
   int block_size = (map_size + kGPUThreadSize - 1) / kGPUThreadSize;
+  std::cout << block_size << std::endl;
   // initializing max_height_data_ with -5
   std::cout << "g2" << std::endl;
-  SetKernel<float><<<block_size, kGPUThreadSize>>>(map_size, -5.f,
-                                                max_height_data);
+  // float* max_height_data_ = nullptr;
+  SetKernel<float><<<map_size, kGPUThreadSize>>>(map_size, -5.f,
+                                                max_height_data_);
   std::cout << "g3" << std::endl;
 
-  // HANDLE_ERROR(cudaMemset(max_height_data + map_size, 0.f,
-  //                         sizeof(float) * map_size));
-  // HANDLE_ERROR(cudaMemset(max_height_data + map_size * 2, 0.f,
-  //                            sizeof(float) * map_size));
-  // HANDLE_ERROR(cudaMemset(max_height_data + map_size * 3, 0.f,
-  //                            sizeof(float) * map_size));
-  // if (use_intensity_feature) {
-  //   HANDLE_ERROR(cudaMemset(max_height_data + map_size * 4, 0.f,
-  //                              sizeof(float) * map_size));
-  //   HANDLE_ERROR(cudaMemset(max_height_data + map_size * 5, 0.f,
-  //                              sizeof(float) * map_size));
-  // }
+  // // HANDLE_ERROR(cudaMemset(max_height_data + map_size, 0.f,
+  // //                         sizeof(float) * map_size));
+  // // HANDLE_ERROR(cudaMemset(max_height_data + map_size * 2, 0.f,
+  // //                            sizeof(float) * map_size));
+  // // HANDLE_ERROR(cudaMemset(max_height_data + map_size * 3, 0.f,
+  // //                            sizeof(float) * map_size));
+  // // if (use_intensity_feature) {
+  // //   HANDLE_ERROR(cudaMemset(max_height_data + map_size * 4, 0.f,
+  // //                              sizeof(float) * map_size));
+  // //   HANDLE_ERROR(cudaMemset(max_height_data + map_size * 5, 0.f,
+  // //                              sizeof(float) * map_size));
+  // // }
 
   HANDLE_ERROR(cudaMalloc((void**)&mean_height_data_, sizeof(float) * map_size));
   HANDLE_ERROR(cudaMalloc((void**)&max_height_data_, sizeof(float) * map_size));
@@ -258,7 +290,9 @@ void FeatureGeneratorCuda::generate(
   }
 
   size_t cloud_size = pc_ptr->size();
-  map_idx_.resize(points.size());
+  // map_idx_.resize(points.size());
+  map_idx_.assign(points.size(), -1);
+
   float inv_res_x =
       0.5 * static_cast<float>(width_) / static_cast<float>(range_);
   float inv_res_y =
@@ -292,15 +326,10 @@ void FeatureGeneratorCuda::generate(
                             int(cloud_size) * sizeof(int)));
   }
 
-  std::cout << pc_ptr->front() << std::endl;
-  std::cout << &(pc_ptr->front()) << std::endl;
-  std::cout << sizeof(pcl::PointXYZI) << std::endl;
-  std::cout << int(cloud_size) << std::endl;
-
-
+  std::cout << "g7" << std::endl;
 
   HANDLE_ERROR(cudaMemcpy(map_idx_gpu_, map_idx_.data(),
-                             sizeof(int) * cloud_size, cudaMemcpyHostToDevice));
+                          sizeof(int) * int(cloud_size), cudaMemcpyHostToDevice));
   std::cout << "g7" << std::endl;
   HANDLE_ERROR(cudaMemcpy(pc_gpu_, &(pc_ptr->front()),
                           sizeof(pcl::PointXYZI) * int(cloud_size),
@@ -308,23 +337,32 @@ void FeatureGeneratorCuda::generate(
 
 
   std::cout << "g8" << std::endl;
-  MapKernel<float><<<block_size, kGPUThreadSize>>>(cloud_size, pc_gpu_,
+  MapKernel<float><<<cloud_size, kGPUThreadSize>>>(cloud_size, pc_gpu_,
                                                    max_height_data_, mean_height_data_, mean_intensity_data_,
                                                    count_data_, map_idx_gpu_);
   std::cout << "g9" << std::endl;
-  TopIntensityKernel<float><<<block_size, kGPUThreadSize>>>(cloud_size,
-        top_intensity_data_, pc_gpu_, max_height_data_,
-        map_idx_gpu_);
-
+  TopIntensityKernel<float><<<cloud_size, kGPUThreadSize>>>(cloud_size,
+                                                            top_intensity_data_, pc_gpu_, max_height_data_,
+                                                            map_idx_gpu_);
+  AverageKernel<float><<<map_size, kGPUThreadSize>>>(map_size, count_data_,
+                                                       max_height_data_, mean_height_data_, mean_intensity_data_,
+                                                       nonempty_data_, log_table_.data(), 256);
   std::cout << "g10" << std::endl;
   HANDLE_ERROR( cudaMemcpy(in_feature_, max_height_data_, sizeof(float) * map_size, cudaMemcpyDeviceToHost ) );
   HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size, mean_height_data_, sizeof(float) * map_size , cudaMemcpyDeviceToHost ) );
   HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 2, count_data_, sizeof(float) * map_size , cudaMemcpyDeviceToHost ) );
-  HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 3, direction_data_, sizeof(float) * map_size , cudaMemcpyDeviceToHost ) );
+  // HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 3, direction_data_, sizeof(float) * map_size , cudaMemcpyHostToHost ) );
   HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 4, top_intensity_data_, sizeof(float) * map_size , cudaMemcpyDeviceToHost ) );
   HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 5, mean_intensity_data_, sizeof(float) * map_size , cudaMemcpyDeviceToHost ) );
-  HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 5, mean_intensity_data_, sizeof(float)* map_size, cudaMemcpyDeviceToHost ) );
-  HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 6, distance_data_, sizeof(float)* map_size, cudaMemcpyDeviceToHost ) );
+  // HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 6, distance_data_, sizeof(float)* map_size, cudaMemcpyHostToHost ) );
   HANDLE_ERROR( cudaMemcpy(in_feature_ + map_size * 7, nonempty_data_, sizeof(float)* map_size, cudaMemcpyDeviceToHost ) );
+
+  // if (pc_gpu_ != nullptr) {
+  //   HANDLE_ERROR(cudaFree(pc_gpu_));
+  // }
+  // if (map_idx_gpu_ != nullptr) {
+  // HANDLE_ERROR(cudaFree(map_idx_gpu_));
+  // }
+
   std::cout << "g11" << std::endl;
 }
