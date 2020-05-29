@@ -28,6 +28,7 @@ class TensorrtBcnnROS {
   ros::Subscriber sub_image_;
   ros::Subscriber sub_points_;
   ros::Publisher pub_confidence_image_;
+  ros::Publisher category_image_pub_;
   ros::Publisher confidence_image_pub_;
   ros::Publisher confidence_map_pub_;
   ros::Publisher class_image_pub_;
@@ -48,6 +49,7 @@ class TensorrtBcnnROS {
   void convertDetected2Dynamic(
       const autoware_perception_msgs::DynamicObjectWithFeatureArray &objects,
       autoware_perception_msgs::DynamicObjectWithFeatureArray &d_objects);
+  cv::Mat get_heatmap(const float *feature);
   cv::Mat get_confidence_image(const float *output);
   cv::Mat get_class_image(const float *output);
   nav_msgs::OccupancyGrid get_confidence_map(cv::Mat confidence_image);
@@ -61,6 +63,7 @@ class TensorrtBcnnROS {
   int channels_ = 4;
   bool use_intensity_feature_;
   bool use_constant_feature_;
+  bool viz_category_image_;
   bool viz_confidence_image_;
   bool viz_class_image_;
   bool pub_colored_points_;

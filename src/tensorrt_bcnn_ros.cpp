@@ -192,14 +192,13 @@ nav_msgs::OccupancyGrid TensorrtBcnnROS::get_confidence_map(
   confidence_map.info.origin.position.y = -((rows_ + 1) * resolution * 0.5f);
   int data;
   for (int i = rows_ - 1; i >= 0; i--) {
-    for (unsigned int j = 0; j < cols_; j++) {
+    for (int j = 0; j < cols_; j++) {
       data = confidence_image.data[i * cols_ + j];
-      if (data >= 123 && data <= 131) {
-        confidence_map.data.push_back(-1);
-      } else if (data >= 251 && data <= 259) {
-        confidence_map.data.push_back(0);
-      } else
-        confidence_map.data.push_back(100);
+      if (data == 0) {
+          confidence_map.data.push_back(100);
+      } else {
+          confidence_map.data.push_back(0);
+      }
     }
   }
   return confidence_map;
