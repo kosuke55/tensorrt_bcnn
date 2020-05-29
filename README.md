@@ -1,5 +1,7 @@
 ### tensorrt_bcnn
 
+This is developing version. Click  [here](https://github.com/tier4/AutowareArchitectureProposal/tree/master/src/perception/object_recognition/detection/lidar_apollo_instance_segmentation) for release version.   
+
 ![result](https://github.com/kosuke55/tensorrt_bcnn/blob/media/media/bcnn_trt_pretrained_0208.gif)  
 
 #### reference
